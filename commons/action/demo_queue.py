@@ -6,7 +6,11 @@ Copyright (c) 2018/8/30, 海牛学院版权所有.
 @author: 青牛
 '''
 from commons.util.log_util import LogUtil
-import base_producer_action,base_consumer_action,Queue,queue_producer,queue_consumer
+import base_producer_action
+import base_consumer_action
+import Queue
+import queue_producer
+import queue_consumer
 
 class HainiuConsumerAction(base_consumer_action.ConsumerAction):
 
