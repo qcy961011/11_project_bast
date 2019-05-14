@@ -6,12 +6,12 @@ Copyright (c) 2017/10/19, 海牛学院版权所有.
 @author: 青牛
 '''
 
-from commons.util.log_util import LogUtil
-from commons.util.db_util import DBUtil
-from commons.util.html_util import HtmlUtil
-from configs import config
+from source.commons.util import LogUtil
+from source.commons.util import DBUtil
+from source.commons.util import HtmlUtil
+from source.configs import config
 from tld import get_tld
-from commons.util.util import Util
+from source.commons.util import Util
 import sys
 
 def create_seed():

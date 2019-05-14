@@ -5,7 +5,7 @@ Copyright (c) 2017/6/30, 海牛学院版权所有.
 @author: 青牛
 '''
 
-from configs import config
+from source.configs import config
 from logging.handlers import TimedRotatingFileHandler
 import logging,content
 
@@ -36,7 +36,7 @@ class LogUtil:
         logger = logging.getLogger(log_name)
         logger.setLevel(logging.INFO)
 
-        fh = TimedRotatingFileHandler(config._LOG_DIR % (file_name),'D')
+        fh = TimedRotatingFileHandler(config._LOG_DIR % (file_name), 'D')
         fh.suffix = "%Y%m%d.log"
         fh.setLevel(logging.INFO)
 
@@ -57,7 +57,7 @@ class LogUtil:
         self.logger = logging.getLogger(log_name)
         self.logger.setLevel(logging.INFO)
 
-        fh = TimedRotatingFileHandler(config._LOG_DIR % (file_name),'D')
+        fh = TimedRotatingFileHandler(config._LOG_DIR % (file_name), 'D')
         fh.suffix = "%Y%m%d.log"
         fh.setLevel(logging.INFO)
 

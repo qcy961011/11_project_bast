@@ -5,7 +5,7 @@ Created on 2018/8/30 下午3:14
 Copyright (c) 2018/8/30, 海牛学院版权所有.
 @author: 青牛
 '''
-from commons.util.log_util import LogUtil
+from source.commons.util import LogUtil
 import base_producer_action
 import base_consumer_action
 import Queue

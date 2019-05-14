@@ -6,9 +6,9 @@ Copyright (c) 2018/8/31, 海牛学院版权所有.
 @author: 青牛
 '''
 
-from commons.util.log_util import LogUtil
-from commons.util.db_util import DBUtil
-from configs import config
+from source.commons.util import LogUtil
+from source.commons.util import DBUtil
+from source.configs import config
 import sys
 
 def push_queue_items():

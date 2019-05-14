@@ -8,12 +8,12 @@ Copyright (c) 2017/7/1, 海牛学院版权所有.
 import os, sys, time, shutil, traceback
 sys.path.append('/home/qingniu/hainiu_crawler')
 
-from commons.util.file_util import FileUtil
-from commons.util.time_util import TimeUtil
+from source.commons.util import FileUtil
+from source.commons.util import TimeUtil
 from send_sms_util import SendSmsUtil
-from commons.util.util import Util
+from source.commons.util import Util
 from datetime import datetime
-from configs import config
+from source.configs import config
 
 
 def date_merge():
@@ -24,8 +24,8 @@ def date_merge():
     alter_time = t.now_time()
     beijing_now = datetime.now()
     now_time = int(time.mktime(beijing_now.timetuple()))
-    tmp_path = config._LOCAL_DATA_DIR % ('%s/%s_%s.tmp' % ('tmp','hainiu', now_time))
-    up_path = config._LOCAL_DATA_DIR % ('%s/%s_%s.done' % ('up','hainiu', now_time))
+    tmp_path = config._LOCAL_DATA_DIR % ('%s/%s_%s.tmp' % ('tmp', 'hainiu', now_time))
+    up_path = config._LOCAL_DATA_DIR % ('%s/%s_%s.done' % ('up', 'hainiu', now_time))
     start_char = ''
     for dirpath, dirnames, filenames in os.walk(config._LOCAL_DATA_DIR % ('done')):
         for filename in filenames:

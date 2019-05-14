@@ -7,14 +7,14 @@ Copyright (c) 2018/8/31, 海牛学院版权所有.
 '''
 
 
-from commons.util.log_util import LogUtil
-from commons.util.db_util import DBUtil
-from commons.util.util import Util
-from configs import config
-from commons.action.base_producer_action import ProducerAction
-from commons.action.base_consumer_action import ConsumerAction
-from commons.action.queue_producer import Producer
-from commons.action.queue_consumer import Consumer
+from source.commons.util import LogUtil
+from source.commons.util import DBUtil
+from source.commons.util import Util
+from source.configs import config
+from source.commons.action import ProducerAction
+from source.commons.action import ConsumerAction
+from source.commons.action import Producer
+from source.commons.action import Consumer
 import Queue,sys
 
 

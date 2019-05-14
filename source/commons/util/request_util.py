@@ -4,9 +4,7 @@ Created on 2017/7/1 13:49
 Copyright (c) 2017/7/1, 海牛学院版权所有.
 @author: 青牛
 '''
-import urllib2, urllib,cookielib,threading,gzip,sys
-from commons.util.file_util import FileUtil
-from StringIO import StringIO
+import urllib2, urllib,cookielib,threading, sys
 from selenium.webdriver import PhantomJS
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 

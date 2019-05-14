@@ -5,7 +5,7 @@ Created on 2018/8/30 下午2:49
 Copyright (c) 2018/8/30, 海牛学院版权所有.
 @author: 青牛
 '''
-from commons.util.log_util import LogUtil
+from source.commons.util.log_util import LogUtil
 import threading,base_producer_action,time,queue_consumer
 
 class Producer(threading.Thread):

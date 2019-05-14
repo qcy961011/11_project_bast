@@ -6,8 +6,8 @@ Copyright (c) 2015, 金山网络版权所有.
 '''
 
 from pykafka import KafkaClient
-from commons.util.util import Util
-from commons.util.log_util import LogUtil
+from source.commons.util import Util
+from source.commons.util import LogUtil
 import random,threading
 
 class KafkaUtil:
@@ -48,7 +48,7 @@ class KafkaUtil:
         self.__lock.release()
         return is_success
 
-from configs import config
+from source.configs import config
 if __name__ == "__main__":
     k = KafkaUtil(config._KAFKA_CONFIG)
     print k.push_message("hainiu")

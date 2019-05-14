@@ -8,9 +8,9 @@ Copyright (c) 2017/10/16, 海牛学院版权所有.
 import mx.URL,sys
 from tld import get_tld
 from bs4 import BeautifulSoup
-from commons.util.request_util import RequestUtil
-from commons.util.html_util import HtmlUtil
-from commons.util.util import Util
+from source.commons.util import RequestUtil
+from source.commons.util import HtmlUtil
+from source.commons.util import Util
 
 def test_beautiful():
     # url = 'http://roll.news.qq.com'

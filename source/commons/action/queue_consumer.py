@@ -5,7 +5,7 @@ Created on 2018/8/30 下午2:26
 Copyright (c) 2018/8/30, 海牛学院版权所有.
 @author: 青牛
 '''
-from commons.util.log_util import LogUtil
+from source.commons.util import LogUtil
 import threading,base_consumer_action,random,time
 
 class Consumer(threading.Thread):
