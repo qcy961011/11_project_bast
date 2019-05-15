@@ -20,13 +20,13 @@ class Producer(threading.Thread):
     def __init__(self, queue, action, name, max_num, sleep_time, work_sleep_time, work_try_num):
         """
         初始化生产线程
-        :param queue:
-        :param action:
-        :param name:
-        :param max_num:
-        :param seelp_time:
-        :param work_sleep_time:
-        :param work_try_num:
+        :param queue:               使用的队列
+        :param action:              生产者动作
+        :param name:                生产者名称
+        :param max_num:             启动的消费者的数量
+        :param sleep_time:          执行下一次生产动作时休息的时间
+        :param work_sleep_time:     每个消费者的休息时间
+        :param work_try_num:        每个消费者动作允许失败的次数
         """
         super(self.__class__, self).__init__()
         self.queue = queue

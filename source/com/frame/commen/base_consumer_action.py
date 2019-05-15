@@ -35,13 +35,6 @@ class ConsumerAction:
         :param values:              执行完消费信息的返回结果
         :return:                    合并消费动作的状态和消费信息的返回结果
         """
-        '''
-        根据消费动作(action方法的结果)，选择是执行success_action还是fail_action
-
-        :param is_success:          消费动作的成功状态       True或False
-        :param values:              执行完消费信息的返回结果
-        :return:                    合并消费动作的状态和消费信息的返回结果
-        '''
         return_value = []
         return_value.append(is_success)
 

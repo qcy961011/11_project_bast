@@ -23,10 +23,10 @@ class ConsumerAction(threading.Thread):
     def __init__(self, queue, name, sleep_time, work_try_num):
         """
         初始化消费线程
-        :param queue:
-        :param name:
-        :param sleep_time:
-        :param work_try_num:
+        :param queue:           使用的队列
+        :param name:            消费者线程的名称，用其代表消费者的名字
+        :param sleep_time:      执行下一次消费动作的休息时间
+        :param work_try_num:    每个消费动作允许失败的次数
         """
         super(self.__class__, self).__init__()
         self.queue = queue
