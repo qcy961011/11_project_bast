@@ -5,6 +5,8 @@ Created on 2019/5/15 20:37
 Copyright 2019/5/15
 @author: qcy
 """
+import re
+
 from bs4 import BeautifulSoup
 
 from com.frame.commen import base_producer_action
@@ -31,6 +33,7 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         self.domain = domain
         self.rl = LogUtil().get_base_logger()
 
+
     def action(self):
         result = True
         r_test = self.url
@@ -38,7 +41,7 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         r = RequestUtil()
         hu = HtmlUtil()
         html = r.http_get_phandomjs(url)
-        print(html)
+        # print(html)
         soup = BeautifulSoup(html, 'lxml')
         title_doc = soup.find_all("title")
 
@@ -62,6 +65,14 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
 
 class produceBaseUrlProduce(base_producer_action.ProducerAction):
 
+    _regex = re.compile(
+        r'^(?:http|ftp)s?://'  # http:// or https://
+        r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
+        r'localhost|'  # localhost...
+        r'\d{1,3}\.\d{1,3}\.\d{1,3}\.\d{1,3})'  # ...or ip
+        r'(?::\d+)?'  # optional port
+        r'(?:/?|[/?]\S+)$', re.IGNORECASE)
+
     def get_page_href(url=None):
         r = RequestUtil()
         hu = HtmlUtil()
@@ -74,7 +85,10 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         for a in a_docs:
             # 获取a标签的href
             a_href = r.get_format_url(url, a, host)
-            a_list.append(a_href)
+            if a_href.find("./") != -1:
+                a_list.append(a_href)
+            elif produceBaseUrlProduce._regex.search(a_href):
+                a_list.append(a_href)
         return a_list
 
     def get_domain(url=None):

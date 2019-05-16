@@ -119,7 +119,7 @@ class RequestUtil:
         # self.driver.save_screenshot('hainiu.png')
         return self.driver.page_source
 
-    def get_format_url(self, url, a_doc, host):
+    def get_format_url(self, url: object, a_doc: object, host: object) -> object:
         a_href = a_doc.get('href')
         try:
             if a_href is not None and a_href.__len__() > 0:
