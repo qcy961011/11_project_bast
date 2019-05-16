@@ -15,8 +15,9 @@ import pymysql
 class DBUtil:
     def __init__(self, config):
         self.db = pymysql.connect(host=config['HOST'], user=config['USER'], passwd=config['PASSWD'],
-                                      db=config['DB'], charset=config['CHARSET'], port=config['PORT'])
-    def execute(self,sql):
+                                  db=config['DB'], charset=config['CHARSET'], port=config['PORT'])
+
+    def execute(self, sql):
         self.cursor = self.db.cursor(cursor=pymysql.cursors.DictCursor)
         self.cursor.execute(sql)
         self.db.commit()
@@ -40,9 +41,14 @@ class DBUtil:
         self.cursor.close()
         self.db.close()
 
-    def executemany_no_commit(self,sql,values):
+    def executemany_no_commit(self, sql, values):
         self.cursor = self.db.cursor()
-        self.cursor.executemany(sql,values)
+        self.cursor.executemany(sql, values)
+
+    def executemany(self, sql, values):
+        self.cursor = self.db.cursor()
+        self.cursor.executemany(sql, values)
+        self.db.commit()
 
 if __name__ == '__main__':
     sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
@@ -53,7 +59,7 @@ if __name__ == '__main__':
         (type,action,params,fail_ip,create_times)
         values (1,"10153108084201229","Baltimore Ravens","Sports Team","2015-08-04 21:35:40");
     """
-    for i in range(0,10):
+    for i in range(0, 10):
         db.execute(sql)
 
     d = db.read_dict("select count(1) as n from hainiu_queue")

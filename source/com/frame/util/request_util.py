@@ -4,10 +4,15 @@ Created on 2017/7/1 13:49
 Copyright (c) 2017/7/1, 海牛学院版权所有.
 @author: 青牛
 '''
-import urllib.request, threading, gzip, sys, io
+import io
+import sys
+import threading
+import urllib.request
 from http import cookiejar
 from urllib import parse
-# import urllib2,cookielib
+from urllib.parse import urlparse
+from tld import get_tld
+
 from selenium.webdriver import PhantomJS
 from selenium.webdriver.common.desired_capabilities import DesiredCapabilities
 
@@ -84,7 +89,8 @@ class RequestUtil:
         return self.http_post_request2(url, datas, 300)
 
     def create_phandomjs(self, service_args, caps, timeout=30):
-        self.driver = PhantomJS(desired_capabilities=caps, service_args=service_args)
+
+        self.driver = PhantomJS(desired_capabilities=caps, service_args=service_args,executable_path=r'D:\tool\phantomjs-2.1.1-windows\bin\phantomjs.exe')
         self.driver.set_page_load_timeout(timeout)
         self.driver.set_script_timeout(timeout)
         self.driver.implicitly_wait(timeout)
@@ -113,6 +119,47 @@ class RequestUtil:
         # self.driver.save_screenshot('hainiu.png')
         return self.driver.page_source
 
+    def get_format_url(self, url, a_doc, host):
+        a_href = a_doc.get('href')
+        try:
+            if a_href is not None and a_href.__len__() > 0:
+                a_href = str(a_href).strip()
+                a_href = a_href[:a_href.index('#')] if a_href.__contains__('#') else a_href
+                # a_href = a_href.encode('utf8')
+                # a_href = urllib.quote(a_href,safe='.:/?&=')
+                if a_href.startswith('//'):
+                    url = 'https:' + a_href if url.startswith('https:') else 'http:' + a_href
+                    url = urlparse(str(url))
+                    a_href = url.url
+                elif a_href.startswith('/'):
+                    url = 'https://' + host + a_href if url.startswith('https:') else 'http://' + host + a_href
+                    url = urlparse(str(url))
+                    a_href = url.url
+                elif a_href.startswith('./') or a_href.startswith('../'):
+                    url = urlparse(str(url) + '/' + a_href)
+                    a_href = url.url
+                elif not a_href.startswith('javascript') and not a_href.startswith('mailto') and not a_href.startswith(
+                        'http') and a_href != '':
+                    url = 'https://' + host + '/' + a_href if url.startswith('https:') else 'http://' + host + '/' + a_href
+                    url = urlparse(str(url))
+                    a_href = url.url
+                a_href = a_href[:-1] if a_href.endswith('/') else a_href
+                # a_href = a_href.lower()
+            get_tld(a_href)
+        except:
+            return ''
+
+        if not a_href.startswith('http'):
+            return ''
+
+        if a_href.__contains__('?'):
+            a_params_str = a_href[a_href.index('?') + 1:]
+            a_params = a_params_str.split('&')
+            a_params.sort()
+            a_params_str = '&'.join(a_params)
+            a_href = a_href[:a_href.index('?') + 1] + a_params_str
+
+        return a_href
 
 class SmartRedirectHandler(urllib.request.HTTPRedirectHandler):
     def http_error_301(self, req, fp, code, msg, headers):
