@@ -31,6 +31,9 @@ class DateTransferProduce(ProducerAction):
             select a_url,a_md5,a_title from hainiu_web_seed_internally
         """
         list = []
+        # 插入redis中的规划
+        redis_util = RedisUtill()
+        u = Util()
         try:
             d = DBUtil(configs._DB_CONFIG)
             sql = select_internally_sql
@@ -41,6 +44,15 @@ class DateTransferProduce(ProducerAction):
                 a_title = record['a_title']
                 c = DateTransferConsumer(a_md5, a_url, a_title)
                 list.append(c)
+                # 去重
+                redis_exist_values = redis_util.get_values_batch_keys(list)
+                redis_exist_keys = ["exist:%s" % u.get_md5(rev) for rev in redis_exist_values if rev != None]
+                redis_dict_down_values = {}
+                for key, value in redis_exist_keys:
+                    redis_dict_down_values["down:%s" % u.get_md5(value)] = value
+                    redis_dict_down_values[key] = value
+                if redis_exist_values.__len__() != 0:
+                    redis_util.set_batch_datas(redis_dict_down_values)
         except:
             d.rollback()
             d.commit()
@@ -58,33 +70,13 @@ class DateTransferConsumer(ConsumerAction):
         self.rl = LogUtil().get_logger('DateTransferConsumer', 'DateTransferConsumer')
 
     def action(self):
-        redis_dict_values = {}
-        redis_dict_keys = []
-        u = Util()
-        a_url = ''
-        redis_util = RedisUtill()
-
-        dict_exit_key = "exist : %s" % self.a_md5
-        redis_dict_values[dict_exit_key] = a_url
-        redis_dict_keys.append(dict_exit_key)
-        # 拿key去redis查是否存在  exist:a_md5,得到这些key对应的values，也就是url列表
-        redis_exist_values = redis_util.get_values_batch_keys(redis_dict_keys)
-        # 将存在的values列表转换成exist:md5形式
-        redis_exist_keys = ["exist:%s" % u.get_md5(rev) for rev in redis_exist_values if rev != None]
-        redis_dict_down_values = {}
-        for key, value in redis_dict_values.items():
-            if key not in redis_exist_keys:
-                redis_dict_down_values["down:%s" % u.get_md5(value)] = value
-                redis_dict_down_values[key] = value
-
-        if redis_dict_down_values.__len__() != 0:
-            redis_util.set_batch_datas(redis_dict_down_values)
+        pass
 
 
 if __name__ == '__main__':
     sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
     q = queue.Queue()
-    pp = DateTransferProduce(20, 6)
-    p = Producer(q, pp, queue_name, 10, 2, 2, 3)
+    pp = DateTransferProduce(10, 3)
+    p = Producer(q, pp, queue_name, 1, 6, 1, 1)
     p.start_work()
