@@ -6,11 +6,13 @@ Copyright (c) 2017/6/30, 海牛学院版权所有.
 @author: 青牛
 '''
 
-import threading, time
+# from redis.connection import (ConnectionPool, UnixDomainSocketConnection,SSLConnection, Token)
+import json
+import sys
+import threading
 
 from rediscluster import StrictRedisCluster
-# from redis.connection import (ConnectionPool, UnixDomainSocketConnection,SSLConnection, Token)
-import sys, json
+import redis
 
 
 class RedisUtill(object):
@@ -20,9 +22,9 @@ class RedisUtill(object):
         pass
 
     def __new__(cls, *args, **kwargs):
-        '''
+        """
         单例模式
-        '''
+        """
         if not hasattr(RedisUtill, "_instance"):
             with RedisUtill._instance_lock:
                 if not hasattr(RedisUtill, "_instance"):
@@ -31,15 +33,16 @@ class RedisUtill(object):
         return RedisUtill._instance
 
     def creat_conn(self):
-        redis_nodes = [{'host': 'nn1.hadoop', 'port': 6379},
-                       {'host': 'nn2.hadoop', 'port': 6379},
-                       {'host': 's1.hadoop', 'port': 6379},
-                       {'host': 's2.hadoop', 'port': 6379},
-                       {'host': 's3.hadoop', 'port': 6379},
-                       {'host': 's4.hadoop', 'port': 6379}]
+        # redis_nodes = [{'host': 'nn1.hadoop', 'port': 6379},
+        #                {'host': 'nn2.hadoop', 'port': 6379},
+        #                {'host': 's1.hadoop', 'port': 6379},
+        #                {'host': 's2.hadoop', 'port': 6379},
+        #                {'host': 's3.hadoop', 'port': 6379},
+        #                {'host': 's4.hadoop', 'port': 6379}]
+        redis_nodes = [{'host': '127.0.0.1', 'port': 6379}]
         try:
-            redisconn = StrictRedisCluster(startup_nodes=redis_nodes)
-
+            # redisconn = StrictRedisCluster(startup_nodes=redis_nodes)
+            redisconn = redis.Redis(host='localhost', port='6379', decode_responses=True)
         except Exception:
             print("Connect Error!")
             sys.exit(1)

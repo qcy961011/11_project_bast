@@ -31,6 +31,15 @@ class DBUtil:
         self.cursor.execute(sql)
         return self.cursor.fetchall()
 
+    def read_dict_parma(self, sql , parma):
+        """execute sql return dict
+        select a,b,c from table
+        ({a:1,b:2,c:33},{a:1,b:3,c:45})
+        """
+        self.cursor = self.db.cursor(cursor=pymysql.cursors.DictCursor)
+        self.cursor.execute(sql,parma)
+        return self.cursor.fetchall()
+
     def commit(self):
         self.db.commit()
 

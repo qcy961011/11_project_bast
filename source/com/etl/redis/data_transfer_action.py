@@ -4,17 +4,25 @@ Created on 2019/5/16 20:09
 Copyright (c) 2019/5/16
 @author: hly
 '''
-from source.com.frame.commen.base_producer_action import ProducerAction
-from source.com.frame.commen.base_consumer_action import ConsumerAction
-from source.com.frame.commen.queue_producer import Producer
-from source.com.frame.util.log_util import LogUtil
-from source.com.frame.util.redis_utill import RedisUtill
-from source.com.frame.util.db_util import DBUtil
-from source.com.frame.util.util import Util
-from source.com.frame.configs import configs
-import sys
 import io
 import queue
+import sys
+
+from bs4 import BeautifulSoup
+from tld import get_tld
+from urllib.parse import urlparse
+
+
+from com.frame.commen.base_consumer_action import ConsumerAction
+from com.frame.commen.base_producer_action import ProducerAction
+from com.frame.commen.queue_producer import Producer
+from com.frame.configs import configs
+from com.frame.util.db_util import DBUtil
+from com.frame.util.html_util import HtmlUtil
+from com.frame.util.log_util import LogUtil
+from com.frame.util.redis_utill import RedisUtill
+from com.frame.util.request_util import RequestUtil
+from com.frame.util.util import Util
 
 queue_name = "transfer"
 
@@ -28,31 +36,26 @@ class DateTransferProduce(ProducerAction):
 
     def queue_items(self):
         select_internally_sql = """
-            select a_url,a_md5,a_title from hainiu_web_seed_internally
+            select a_url,a_md5,a_title from hainiu_web_seed_internally where status = 0 limit %s
         """
         list = []
-        # 插入redis中的规划
-        redis_util = RedisUtill()
+        redisConn = RedisUtill().creat_conn()
         u = Util()
         try:
             d = DBUtil(configs._DB_CONFIG)
             sql = select_internally_sql
-            select_dict = d.read_dict(sql)
+            select_dict = d.read_dict_parma(sql, [self.limit])
             for record in select_dict:
                 a_url = record['a_url']
-                a_md5 = record['a_md5']
-                a_title = record['a_title']
-                c = DateTransferConsumer(a_md5, a_url, a_title)
-                list.append(c)
-                # 去重
-                redis_exist_values = redis_util.get_values_batch_keys(list)
-                redis_exist_keys = ["exist:%s" % u.get_md5(rev) for rev in redis_exist_values if rev != None]
-                redis_dict_down_values = {}
-                for key, value in redis_exist_keys:
-                    redis_dict_down_values["down:%s" % u.get_md5(value)] = value
-                    redis_dict_down_values[key] = value
-                if redis_exist_values.__len__() != 0:
-                    redis_util.set_batch_datas(redis_dict_down_values)
+                md5 = u.get_md5(str(a_url).encode('utf-8'))
+                if redisConn.get('key:'+md5) is None:
+                    redisConn.set('key:' + md5, a_url)
+                    redisConn.set('down:' + md5, a_url)
+                    # redisConn.set("count:" + md5, 1)
+                    c = DateTransferConsumer(a_url)
+                    list.append(c)
+                else:
+                    continue
         except:
             d.rollback()
             d.commit()
@@ -62,21 +65,49 @@ class DateTransferProduce(ProducerAction):
 
 
 class DateTransferConsumer(ConsumerAction):
-    def __init__(self, a_url, a_md5, a_title):
+    def __init__(self, a_url, ):
         ConsumerAction.__init__(self)
         self.a_url = a_url
-        self.a_md5 = a_md5
-        self.a_title = a_title
         self.rl = LogUtil().get_logger('DateTransferConsumer', 'DateTransferConsumer')
 
+    def get_domain(url=None):
+        domain = get_tld(url)
+        return domain
+
     def action(self):
-        pass
+        redisConn = RedisUtill().creat_conn()
+        u = Util()
+        result = True
+        hu = HtmlUtil()
+        r = RequestUtil()
+
+        try:
+            md5 = u.get_md5(str(self.a_url).encode('utf-8'))
+            url = redisConn.get("down:" + md5)
+            if url is not None:
+                html = r.http_get_phandomjs(url)
+                soup = BeautifulSoup(html, 'lxml')
+                title_doc = soup.find_all("title")
+                domain = DateTransferConsumer.get_domain(url)
+                parsed_uri = urlparse(url)
+                host = '{uri.netloc}'.format(uri=parsed_uri)
+                data = html.replace('\r', '').replace('\n', '').replace('\t', '')
+                insert_web_page_sql = """
+                    insert into qcy_hainiu_web_page (url,md5,create_time,create_day,create_hour,domain,param,update_time,host,
+                    title,fail_ip,status) values ("%s","%s",%s,%s,%s,"%s","%s",%s,"%s","%s","%s",%s)
+                    on DUPLICATE KEY UPDATE fail_times=fail_times+1,fail_ip=values(fail_ip);
+                """
+
+        except:
+            pass
+        finally:
+            pass
 
 
 if __name__ == '__main__':
     sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
     q = queue.Queue()
-    pp = DateTransferProduce(10, 3)
-    p = Producer(q, pp, queue_name, 1, 6, 1, 1)
+    pp = DateTransferProduce(20, 6)
+    p = Producer(q, pp, queue_name, 10, 2, 2, 3)
     p.start_work()
