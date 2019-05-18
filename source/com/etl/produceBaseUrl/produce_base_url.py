@@ -19,7 +19,7 @@ from com.frame.util.db_util import DBUtil
 from com.frame.util.request_util import RequestUtil
 from com.frame.util.html_util import HtmlUtil
 from urllib.parse import urlparse
-from tld import get_tld
+import tld
 from com.frame.util.time_util import TimeUtil
 
 
@@ -32,7 +32,7 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         super(self.__class__, self).__init__()
         self.url = url
         self.domain = domain
-        self.rl = LogUtil().get_base_logger()
+        self.rl = LogUtil().get_logger("ConsumerAction", "ConsumerAction")
 
     def action(self):
         result = True
@@ -55,7 +55,7 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
             a_host = hu.get_url_host(a_href)
             a_md5 = u.get_md5(a_href)
             a_xpath = hu.get_dom_parent_xpath_js(a)
-        title_doc = soup.find_all("title")
+        # title_doc = soup.find_all("title")
         update_time = t.timestamp2str
         create_time = update_time
         create_day = t.now_day()
@@ -71,14 +71,13 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
                      """
         # 插入到种子表
         insert_seed_table = """
-                        insert into table hainiu_web_seed (url,md5,domain,host,category,status) values
-                                                          ('%s','%s','%s','%s','%s',0);
+                        insert into table hainiu_web_seed (url,md5,domain,host,category,status) values ('%s','%s','%s','%s','%s',0);
                     """
         try:
             d = DBUtil(configs._DB_CONFIG)
             sql = insert_seed_table % (url, md5, self.domain, host, "新闻")
             d.execute(sql)
-            if str(self.url).find(self.domain) != -1:
+            if a_host.__contains__(self.domain):
                 r_test = insert_sql.replace('<table>', inner_talbe) % (url, md5, self.domain, host, a_md5,
                                                                        a_host, a_xpath, a_title, create_time,
                                                                        create_day, create_hour, update_time, status)
@@ -113,7 +112,7 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         r = RequestUtil()
         hu = HtmlUtil()
         html = r.http_get_phandomjs(url)
-        o = urlparse(url)
+        # o = urlparse(url)
         soup = BeautifulSoup(html)
         a_docs = soup.find_all("a")
         host = hu.get_url_host(url)
@@ -128,11 +127,11 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         return a_list
 
     def get_domain(url=None):
-        domain = get_tld(url)
+        domain = tld.get_fld(url)
         return domain
 
     def queue_items(self):
-        get_seed_sql = "select * from qcy_web_seed where status = 0 limit 1"
+        get_seed_sql = "select * from qcy_web_seed where status = 1 limit 1"
         db = DBUtil(configs._DB_CONFIG)
         d = db.read_dict(get_seed_sql)
         update_seed_status = "update qcy_web_seed set status = 1 where id = %s"
@@ -141,13 +140,14 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         db.commit()
         _items_list = []
         try:
+            print(d[0]["url"])
             a_list = produceBaseUrlProduce.get_page_href(url=d[0]["url"])
             domain = produceBaseUrlProduce.get_domain(url=d[0]["url"])
-
+            print(a_list, domain)
             for a in a_list:
                 web_queue_insert_sql = "insert into qcy_web_queue (type,action,params)  values(1, %s , %s)"
                 _items_list.append(produceBaseUrlAction(a, domain))
-                n = db.executemany(web_queue_insert_sql, [(a, 'test')])
+                db.executemany(web_queue_insert_sql, [(a, 'test')])
         except:
             update_seed_status = "update qcy_web_seed set status = 0 where id = %s"
             db.executemany(update_seed_status, [(d[0]["id"])])

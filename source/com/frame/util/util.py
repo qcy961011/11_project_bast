@@ -34,7 +34,7 @@ class Util:
 
     def get_md5(self, str):
         m5 = hashlib.md5()
-        m5.update(str)
+        m5.update(str.encode("utf_8"))
         md5 = m5.hexdigest()
         return md5
 
