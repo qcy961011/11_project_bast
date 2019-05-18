@@ -44,6 +44,7 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         hu = HtmlUtil()
         t = TimeUtil()
         u = Util()
+        ip = u.get_local_ip()
         md5 = u.get_md5(url)
         host = hu.get_url_host(url)
         htmlm877 = r.http_get_phandomjs(url)
@@ -70,22 +71,20 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         exter_table = "hly_web_seed_externally"
         # 分类插入到不同的表，根据domain来划分
         insert_sql = """
-               insert into <table> (url,md5,domain,host,a_md5,a_host,a_xpath,a_title,create_time, a_url,a_href
-              create_day, create_hour,update_time,status)
-              values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
-                     """
+               insert into <table> (url,md5,domain,host,a_md5,a_host,a_xpath,create_time,a_title, a_url,
+              create_day, create_hour,update_time,status) 
+              values ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s",%s,%s,%s,%s) on DUPLICATE KEY UPDATE update_time={},fail_times=fail_times+1
+                     """.format(update_time)
         insert_values = (url, md5, self.domain, host, a_md5, a_host, a_xpath, create_time,
-                         pymysql.escape_string(a_url),
                          pymysql.escape_string(a_title),
-                         pymysql.escape_string(a_href),
+                         pymysql.escape_string(a_url),
                          create_day, create_hour, update_time, status)
-        print("insert_values", insert_values)
 
         try:
             d = DBUtil(configs._DB_CONFIG)
             if a_host.__contains__(self.domain):
                 r_test = insert_sql.replace('<table>', inner_talbe)
-                d.execute(r_test, value=insert_values)
+
             else:
                 r_test = insert_sql.replace('<table>', exter_table)
                 d.execute(r_test, value=insert_values)
@@ -170,7 +169,7 @@ if __name__ == "__main__":
     # 初始化生产者动作
     pp = produceBaseUrlProduce()
     # 初始化生产者
-    p = queue_producer.Producer(q, pp, configs._BASE_URL_PRODUCE_NAME, 1,
+    p = queue_producer.Producer(q, pp, configs._BASE_URL_PRODUCE_NAME, configs._BASE_URL_MAX_NUMBER,
                                 configs._BASE_URL_SLEEP_TIME, configs._BASE_URL_WORK_SLEEP_TIME,
                                 configs._BASE_URL_WORK_TRY_NUMBER)
     # 启动整个生产和消费任务
