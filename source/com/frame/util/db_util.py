@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-config_util.py
+config_util
 Created on 2019/5/15 21:21
 Copyright 2019/5/15
 @author: qcy
@@ -17,9 +17,9 @@ class DBUtil:
         self.db = pymysql.connect(host=config['HOST'], user=config['USER'], passwd=config['PASSWD'],
                                   db=config['DB'], charset=config['CHARSET'], port=config['PORT'])
 
-    def execute(self, sql):
+    def execute(self, sql, value=None):
         self.cursor = self.db.cursor(cursor=pymysql.cursors.DictCursor)
-        self.cursor.execute(sql)
+        self.cursor.execute(sql, value)
         self.db.commit()
 
     def read_dict(self, sql):

@@ -11,7 +11,6 @@ import json
 import sys
 import threading
 
-from rediscluster import StrictRedisCluster
 import redis
 
 
