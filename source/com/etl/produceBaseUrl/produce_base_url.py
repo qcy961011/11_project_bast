@@ -76,7 +76,6 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
                     """
         try:
             d = DBUtil(configs._DB_CONFIG)
-            d.execute_no_commit("set NAMES utf8mb4;")
             sql = insert_seed_table % (url, md5, self.domain, host, "新闻")
             d.execute(sql)
             if str(self.url).find(self.domain) != -1:
