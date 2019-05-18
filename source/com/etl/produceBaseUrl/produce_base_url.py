@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
 produce_base_url.py
 Created on 2019/5/15 20:37
@@ -6,24 +5,26 @@ Copyright 2019/5/15
 @author: qcy
 """
 import re
-
+import queue
 from bs4 import BeautifulSoup
 
 from com.frame.commen import base_producer_action
 from com.frame.commen import base_consumer_action
 from com.frame.commen import queue_producer
 from com.frame.util.log_util import LogUtil
-from queue import Queue
+from com.frame.util.util import Util
+
 from com.frame.configs import configs
 from com.frame.util.db_util import DBUtil
 from com.frame.util.request_util import RequestUtil
 from com.frame.util.html_util import HtmlUtil
 from urllib.parse import urlparse
 from tld import get_tld
+from com.frame.util.time_util import TimeUtil
 
 
 class produceBaseUrlAction(base_consumer_action.ConsumerAction):
-    def __init__(self, url , domain):
+    def __init__(self, url, domain):
         """
         初始化消费者实现类
         :param text:
@@ -33,23 +34,60 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
         self.domain = domain
         self.rl = LogUtil().get_base_logger()
 
-
     def action(self):
         result = True
         r_test = self.url
         url = self.url
         r = RequestUtil()
         hu = HtmlUtil()
-        html = r.http_get_phandomjs(url)
+        t = TimeUtil()
+        u = Util()
+        md5 = u.get_md5(url)
+        host = hu.get_url_host(url)
+        htmlm877 = r.http_get_phandomjs(url)
+        data = htmlm877.replace('\r', '').replace('\n', '').replace('\t', '')
         # print(html)
-        soup = BeautifulSoup(html, 'lxml')
+        soup = BeautifulSoup(data, 'lxml')
+        a_docs = soup.find_all("a")
+        for a in a_docs:
+            a_href = RequestUtil.get_format_url(self, url, a, host)
+            a_title = a.get_text().strip()
+            a_host = hu.get_url_host(a_href)
+            a_md5 = u.get_md5(a_href)
+            a_xpath = hu.get_dom_parent_xpath_js(a)
         title_doc = soup.find_all("title")
-
+        update_time = t.timestamp2str
+        create_time = update_time
+        create_day = t.now_day()
+        create_hour = t.now_hour()
+        status = 0
+        inner_talbe = "hly_web_seed_internally"
+        exter_table = "hly_web_seed_externally"
+        # 分类插入到不同的表，根据domain来划分
+        insert_sql = """
+               insert into <table> (url,md5,domain,host,a_md5,a_host,a_xpath,a_title,create_time, 
+              create_day, create_hour,update_time,status)
+              values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
+                     """
+        # 插入到种子表
+        insert_seed_table = """
+                        insert into table hainiu_web_seed (url,md5,domain,host,category,status) values
+                                                          ('%s','%s','%s','%s','%s',0);
+                    """
         try:
+            d = DBUtil(configs._DB_CONFIG)
+            d.execute_no_commit("set NAMES utf8mb4;")
+            sql = insert_seed_table % (url, md5, self.domain, host, "新闻")
+            d.execute(sql)
             if str(self.url).find(self.domain) != -1:
-                r_test = '内链'
+                r_test = insert_sql.replace('<table>', inner_talbe) % (url, md5, self.domain, host, a_md5,
+                                                                       a_host, a_xpath, a_title, create_time,
+                                                                       create_day, create_hour, update_time, status)
             else:
-                r_test = '外链'
+                r_test = insert_sql.replace('<table>', exter_table) % (url, md5, self.domain, host, a_md5,
+                                                                       a_host, a_xpath, a_title, create_time,
+                                                                       create_day, create_hour, update_time, status)
+            d.executemany_no_commit(insert_sql, r_test)
         except:
             result = False
             self.rl.exception()
@@ -64,7 +102,6 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
 
 
 class produceBaseUrlProduce(base_producer_action.ProducerAction):
-
     _regex = re.compile(
         r'^(?:http|ftp)s?://'  # http:// or https://
         r'(?:(?:[A-Z0-9](?:[A-Z0-9-]{0,61}[A-Z0-9])?\.)+(?:[A-Z]{2,6}\.?|[A-Z0-9-]{2,}\.?)|'  # domain...
@@ -101,11 +138,13 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         d = db.read_dict(get_seed_sql)
         update_seed_status = "update qcy_web_seed set status = 1 where id = %s"
         db.executemany_no_commit(update_seed_status, [(d[0]["id"])])
+
         db.commit()
+        _items_list = []
         try:
             a_list = produceBaseUrlProduce.get_page_href(url=d[0]["url"])
             domain = produceBaseUrlProduce.get_domain(url=d[0]["url"])
-            _items_list = []
+
             for a in a_list:
                 web_queue_insert_sql = "insert into qcy_web_queue (type,action,params)  values(1, %s , %s)"
                 _items_list.append(produceBaseUrlAction(a, domain))
@@ -120,7 +159,7 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
 
 if __name__ == "__main__":
     # 初始化使用的队列
-    q = Queue()
+    q = queue.Queue()
     # 初始化生产者动作
     pp = produceBaseUrlProduce()
     # 初始化生产者
