@@ -1,9 +1,10 @@
 # -*- encoding: utf-8 -*-
-'''
-Created on 2017/7/1 13:49
-Copyright (c) 2017/7/1, 海牛学院版权所有.
-@author: 青牛
-'''
+"""
+time_util
+Created on 2019/5/15 21:21
+Copyright 2019/5/15
+@author: qcy
+"""
 import datetime
 import time
 

@@ -7,11 +7,11 @@ Copyright (c) 2019/5/16
 import io
 import queue
 import sys
+import traceback
 
 from bs4 import BeautifulSoup
 from tld import get_tld
 from urllib.parse import urlparse
-
 
 from com.frame.commen.base_consumer_action import ConsumerAction
 from com.frame.commen.base_producer_action import ProducerAction
@@ -23,6 +23,7 @@ from com.frame.util.log_util import LogUtil
 from com.frame.util.redis_utill import RedisUtill
 from com.frame.util.request_util import RequestUtil
 from com.frame.util.util import Util
+from com.frame.util.time_util import TimeUtil
 
 queue_name = "transfer"
 
@@ -48,7 +49,7 @@ class DateTransferProduce(ProducerAction):
             for record in select_dict:
                 a_url = record['a_url']
                 md5 = u.get_md5(str(a_url).encode('utf-8'))
-                if redisConn.get('key:'+md5) is None:
+                if redisConn.get('key:' + md5) is None:
                     redisConn.set('key:' + md5, a_url)
                     redisConn.set('down:' + md5, a_url)
                     # redisConn.set("count:" + md5, 1)
@@ -65,7 +66,7 @@ class DateTransferProduce(ProducerAction):
 
 
 class DateTransferConsumer(ConsumerAction):
-    def __init__(self, a_url, ):
+    def __init__(self, a_url):
         ConsumerAction.__init__(self)
         self.a_url = a_url
         self.rl = LogUtil().get_logger('DateTransferConsumer', 'DateTransferConsumer')
@@ -80,7 +81,8 @@ class DateTransferConsumer(ConsumerAction):
         result = True
         hu = HtmlUtil()
         r = RequestUtil()
-
+        db = DBUtil(configs._DB_CONFIG)
+        time = TimeUtil()
         try:
             md5 = u.get_md5(str(self.a_url).encode('utf-8'))
             url = redisConn.get("down:" + md5)
@@ -97,11 +99,17 @@ class DateTransferConsumer(ConsumerAction):
                     title,fail_ip,status) values ("%s","%s",%s,%s,%s,"%s","%s",%s,"%s","%s","%s",%s)
                     on DUPLICATE KEY UPDATE fail_times=fail_times+1,fail_ip=values(fail_ip);
                 """
-
-        except:
-            pass
+                db.execute(insert_web_page_sql, value=(
+                url, md5, time.str2timestamp(time.now_time()), time.now_day(format='%Y%m%d'), time.now_hour(), domain,
+                data, time.str2timestamp(time.now_time()),
+                host, title_doc, u.get_local_ip(), 1))
+        except Exception as e:
+            traceback.print_exc()
+            result = False
         finally:
             pass
+        return self.result(result, self.a_url)
+
 
 
 if __name__ == '__main__':
