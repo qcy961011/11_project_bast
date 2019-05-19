@@ -32,16 +32,16 @@ class RedisUtill(object):
         return RedisUtill._instance
 
     def creat_conn(self):
-        # redis_nodes = [{'host': 'nn1.hadoop', 'port': 6379},
-        #                {'host': 'nn2.hadoop', 'port': 6379},
-        #                {'host': 's1.hadoop', 'port': 6379},
-        #                {'host': 's2.hadoop', 'port': 6379},
-        #                {'host': 's3.hadoop', 'port': 6379},
-        #                {'host': 's4.hadoop', 'port': 6379}]
-        redis_nodes = [{'host': '127.0.0.1', 'port': 6379}]
+        redis_nodes = [{'host': 'nn1.hadoop', 'port': 6379},
+                       {'host': 'nn2.hadoop', 'port': 6379},
+                       {'host': 's1.hadoop', 'port': 6379},
+                       {'host': 's2.hadoop', 'port': 6379},
+                       {'host': 's3.hadoop', 'port': 6379},
+                       {'host': 's4.hadoop', 'port': 6379}]
+        # redis_nodes = [{'host': '127.0.0.1', 'port': 6379}]
         try:
-            # redisconn = StrictRedisCluster(startup_nodes=redis_nodes)
-            redisconn = redis.Redis(host='localhost', port='6379', decode_responses=True)
+            redisconn = StrictRedisCluster(startup_nodes=redis_nodes)
+            # redisconn = redis.Redis(host='localhost', port='6379', decode_responses=True)
         except Exception:
             print("Connect Error!")
             sys.exit(1)
