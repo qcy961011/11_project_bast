@@ -29,6 +29,7 @@ queue_name = "transfer"
 
 
 class DateTransferProduce(ProducerAction):
+    _limit_count = 0
     def __init__(self, limit, fail_times):
         super(self.__class__, self).__init__()
         self.limit = limit
@@ -37,7 +38,7 @@ class DateTransferProduce(ProducerAction):
 
     def queue_items(self):
         select_internally_sql = """
-            select a_url,a_md5,a_title from hainiu_web_seed_internally where status = 0 limit %s
+            select a_url,a_md5,a_title from hainiu_web_seed_internally where status = 0 limit %s,%s
         """
         list = []
         redisConn = RedisUtill().creat_conn()
@@ -45,7 +46,7 @@ class DateTransferProduce(ProducerAction):
         try:
             d = DBUtil(configs._DB_CONFIG)
             sql = select_internally_sql
-            select_dict = d.read_dict_parma(sql, [self.limit])
+            select_dict = d.read_dict_parma(sql, [DateTransferProduce._limit_count * self.limit , self.limit])
             for record in select_dict:
                 a_url = record['a_url']
                 md5 = u.get_md5(str(a_url).encode('utf-8'))
@@ -57,6 +58,7 @@ class DateTransferProduce(ProducerAction):
                     list.append(c)
                 else:
                     continue
+            DateTransferProduce._limit_count = DateTransferProduce._limit_count + 1
         except:
             d.rollback()
             d.commit()
@@ -86,30 +88,44 @@ class DateTransferConsumer(ConsumerAction):
         try:
             md5 = u.get_md5(str(self.a_url).encode('utf-8'))
             url = redisConn.get("down:" + md5)
+            redisConn.delete("down:" + md5)
             if url is not None:
                 html = r.http_get_phandomjs(url)
                 soup = BeautifulSoup(html, 'lxml')
-                title_doc = soup.find_all("title")
+                title_doc = soup.find("title") if soup.find("title") != None else ""
                 domain = DateTransferConsumer.get_domain(url)
                 parsed_uri = urlparse(url)
                 host = '{uri.netloc}'.format(uri=parsed_uri)
                 data = html.replace('\r', '').replace('\n', '').replace('\t', '')
                 insert_web_page_sql = """
                     insert into qcy_hainiu_web_page (url,md5,create_time,create_day,create_hour,domain,param,update_time,host,
-                    title,fail_ip,status) values ("%s","%s",%s,%s,%s,"%s","%s",%s,"%s","%s","%s",%s)
+                    title,fail_ip,status) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     on DUPLICATE KEY UPDATE fail_times=fail_times+1,fail_ip=values(fail_ip);
                 """
-                db.execute(insert_web_page_sql, value=(
-                url, md5, time.str2timestamp(time.now_time()), time.now_day(format='%Y%m%d'), time.now_hour(), domain,
-                data, time.str2timestamp(time.now_time()),
-                host, title_doc, u.get_local_ip(), 1))
+                now_time = time.str2timestamp(time.now_time())
+                now_day = time.now_day(format='%Y%m%d')
+                now_hour = time.now_hour()
+                ip = u.get_local_ip()
+                db.execute(insert_web_page_sql, (
+                    url,
+                    md5,
+                    now_time,
+                    now_day,
+                    now_hour,
+                    domain,
+                    data,
+                    now_day,
+                    host,
+                    str(title_doc),
+                    ip,
+                    1))
         except Exception as e:
             traceback.print_exc()
+            redisConn.set("down:" + md5, url)
             result = False
         finally:
             pass
         return self.result(result, self.a_url)
-
 
 
 if __name__ == '__main__':
