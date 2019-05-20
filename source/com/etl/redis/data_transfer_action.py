@@ -42,9 +42,7 @@ class DateTransferProduce(ProducerAction):
             select a_url,a_md5,a_title from qcy_web_seed_internally where status = 0 limit %s,%s
         """
         list = []
-        # redisConn = RedisUtill().creat_conn()
-        redisUtil = RedisUtill()
-
+        redisConn = RedisUtill().creat_conn()
         u = Util()
         try:
             d = DBUtil(configs._DB_CONFIG)
@@ -53,9 +51,9 @@ class DateTransferProduce(ProducerAction):
             for record in select_dict:
                 a_url = record['a_url']
                 md5 = u.get_md5(str(a_url))
-                if redisUtil.get_value_for_key('key:' + md5) is None:
-                    redisUtil.set_data('key:' + md5, a_url)
-                    redisUtil.set_data('down:' + md5, a_url)
+                if redisConn.get('key:' + md5) is None:
+                    redisConn.set('key:' + md5, a_url)
+                    redisConn.set('down:' + md5, a_url)
                     # redisConn.set("count:" + md5, 1)
                     c = DateTransferConsumer(a_url)
                     list.append(c)
