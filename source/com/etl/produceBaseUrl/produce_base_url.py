@@ -38,62 +38,82 @@ class produceBaseUrlAction(base_consumer_action.ConsumerAction):
 
     def action(self):
         result = True
-        r_test = self.url
-        url = self.url
-        r = RequestUtil()
-        hu = HtmlUtil()
-        t = TimeUtil()
-        u = Util()
-        ip = u.get_local_ip()
-        md5 = u.get_md5(url)
-        host = hu.get_url_host(url)
-        htmlm877 = r.http_get_phandomjs(url)
-        data = htmlm877.replace('\r', '').replace('\n', '').replace('\t', '')
-        # print(html)
-        soup = BeautifulSoup(data, 'lxml')
-        a_docs = soup.find_all("a")
-        for a in a_docs:
-            a_href = RequestUtil.get_format_url(self, url, a, host)
-            a_url = self.url
-            a_title = a.get_text().strip()
-            parsed_uri = urlparse(url)
-            a_host = '{uri.netloc}'.format(uri=parsed_uri)
-            a_md5 = u.get_md5(a_href)
-            a_xpath = hu.get_dom_parent_xpath_js(a)
-        # title_doc = soup.find_all("title")
-        update_time = int(t.str2timestamp(t.now_time()))
-        create_time = update_time
-        create_day = t.now_day(format='%Y%m%d')
-        create_hour = t.now_hour()
-        print(type(update_time), type(create_time), type(create_day), type(create_hour))
-        status = 0
-        inner_talbe = "hly_web_seed_internally"
-        exter_table = "hly_web_seed_externally"
-        # 分类插入到不同的表，根据domain来划分
-        insert_sql = """
-               insert into <table> (url,md5,domain,host,a_md5,a_host,a_xpath,create_time,a_title, a_url,
-              create_day, create_hour,update_time,status) 
-              values ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s",%s,%s,%s,%s) on DUPLICATE KEY UPDATE update_time={},fail_times=fail_times+1
-                     """.format(update_time)
-        insert_values = (url, md5, self.domain, host, a_md5, a_host, a_xpath, create_time,
-                         pymysql.escape_string(a_title),
-                         pymysql.escape_string(a_url),
-                         create_day, create_hour, update_time, status)
-
         try:
-            d = DBUtil(configs._DB_CONFIG)
-            if a_host.__contains__(self.domain):
-                r_test = insert_sql.replace('<table>', inner_talbe)
-
-            else:
-                r_test = insert_sql.replace('<table>', exter_table)
-                d.execute(r_test, value=insert_values)
+            r_test = self.url
+            url = self.url
+            r = RequestUtil()
+            hu = HtmlUtil()
+            t = TimeUtil()
+            u = Util()
+            ip = u.get_local_ip()
+            md5 = u.get_md5(url)
+            host = hu.get_url_host(url)
+            htmlm877 = r.http_get_phandomjs(url)
+            data = htmlm877.replace('\r', '').replace('\n', '').replace('\t', '')
+            # print(html)
+            list = []
+            a_set = set()
+            soup = BeautifulSoup(data, 'lxml')
+            a_docs = soup.find_all("a")
+            for a in a_docs:
+                a_href = RequestUtil.get_format_url(self, url, a, host)
+                a_title = a.get_text().strip()
+                if a_href == '' or a_title == '':
+                    continue
+                if a_set.__contains__(a_href):
+                    continue
+                a_set.add(a_href)
+                a_url = a_href
+                parsed_uri = urlparse(url)
+                a_host = '{uri.netloc}'.format(uri=parsed_uri)
+                a_md5 = u.get_md5(a_href)
+                a_xpath = hu.get_dom_parent_xpath_js(a)
+                list.append(a_href)
+                # title_doc = soup.find_all("title")
+                update_time = int(t.str2timestamp(t.now_time()))
+                create_time = update_time
+                create_day = t.now_day(format='%Y%m%d')
+                create_hour = t.now_hour()
+                status = 0
+                param = '资讯'
+                inner_talbe = "qcy_web_seed_internally"
+                exter_table = "qcy_web_seed_externally"
+                # 分类插入到不同的表，根据domain来划分
+                insert_sql = """
+                         insert into <table> (url,md5,domain,host,a_md5,a_host,a_xpath,create_time,a_title, a_url,
+                        create_day, create_hour,update_time,status,param) 
+                        values ("%s","%s","%s","%s","%s","%s","%s","%s","%s","%s",%s,%s,%s,%s,"%s") on DUPLICATE KEY UPDATE update_time={},fail_times=fail_times+1
+                               """.format(update_time)
+                # print(url, md5, self.domain, host, a_md5, a_host, a_xpath, create_time,
+                #                  pymysql.escape_string(a_title),
+                #                  pymysql.escape_string(a_url),
+                #                  create_day, create_hour, update_time, status)
+                insert_values = (url, md5, self.domain, host, a_md5, a_host, a_xpath, create_time,
+                                 pymysql.escape_string(a_title),
+                                 pymysql.escape_string(a_url),
+                                 create_day, create_hour, update_time, status, param)
+                print(insert_sql % (url, md5, self.domain, host, a_md5, a_host, a_xpath, create_time,
+                                    pymysql.escape_string(a_title),
+                                    pymysql.escape_string(a_url),
+                                    create_day, create_hour, update_time, status, param))
+                try:
+                    d = DBUtil(configs._DB_CONFIG)
+                    if a_host.__contains__(self.domain):
+                        r_test = insert_sql.replace('<table>', inner_talbe)
+                        d.execute(r_test, value=insert_values)
+                        # print("插入内链表")
+                    else:
+                        r_test = insert_sql.replace('<table>', exter_table)
+                        d.execute(r_test, value=insert_values)
+                        # print("插入外链表")
+                except:
+                    result = False
+                    self.rl.exception()
+                finally:
+                    d.close()
+                    r.close_phandomjs()
         except:
-            result = False
             self.rl.exception()
-        finally:
-            d.close()
-            r.close_phandomjs()
 
         return self.result(result, [r_test])
 
@@ -136,7 +156,7 @@ class produceBaseUrlProduce(base_producer_action.ProducerAction):
         return domain
 
     def queue_items(self):
-        get_seed_sql = "select * from qcy_web_seed where status = 1 limit 1"
+        get_seed_sql = "select * from qcy_web_seed where status = 0 limit 1"
         db = DBUtil(configs._DB_CONFIG)
         d = db.read_dict(get_seed_sql)
         url_list = d[0]["url"]

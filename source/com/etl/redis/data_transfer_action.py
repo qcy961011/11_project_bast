@@ -15,7 +15,7 @@ from urllib.parse import urlparse
 
 from com.frame.commen.base_consumer_action import ConsumerAction
 from com.frame.commen.base_producer_action import ProducerAction
-from com.frame.commen.queue_producer import Producer
+from com.frame.commen import queue_producer
 from com.frame.configs import configs
 from com.frame.util.db_util import DBUtil
 from com.frame.util.html_util import HtmlUtil
@@ -30,6 +30,7 @@ queue_name = "transfer"
 
 class DateTransferProduce(ProducerAction):
     _limit_count = 0
+
     def __init__(self, limit, fail_times):
         super(self.__class__, self).__init__()
         self.limit = limit
@@ -38,7 +39,7 @@ class DateTransferProduce(ProducerAction):
 
     def queue_items(self):
         select_internally_sql = """
-            select a_url,a_md5,a_title from hainiu_web_seed_internally where status = 0 limit %s,%s
+            select a_url,a_md5,a_title from qcy_web_seed_internally where status = 0 limit %s,%s
         """
         list = []
         redisConn = RedisUtill().creat_conn()
@@ -46,10 +47,10 @@ class DateTransferProduce(ProducerAction):
         try:
             d = DBUtil(configs._DB_CONFIG)
             sql = select_internally_sql
-            select_dict = d.read_dict_parma(sql, [DateTransferProduce._limit_count * self.limit , self.limit])
+            select_dict = d.read_dict_parma(sql, [DateTransferProduce._limit_count * self.limit, self.limit])
             for record in select_dict:
                 a_url = record['a_url']
-                md5 = u.get_md5(str(a_url).encode('utf-8'))
+                md5 = u.get_md5(str(a_url))
                 if redisConn.get('key:' + md5) is None:
                     redisConn.set('key:' + md5, a_url)
                     redisConn.set('down:' + md5, a_url)
@@ -86,10 +87,12 @@ class DateTransferConsumer(ConsumerAction):
         db = DBUtil(configs._DB_CONFIG)
         time = TimeUtil()
         try:
-            md5 = u.get_md5(str(self.a_url).encode('utf-8'))
+            md5 = u.get_md5(str(self.a_url))
             url = redisConn.get("down:" + md5)
+            print(url)
             redisConn.delete("down:" + md5)
             if url is not None:
+                print(url)
                 html = r.http_get_phandomjs(url)
                 soup = BeautifulSoup(html, 'lxml')
                 title_doc = soup.find("title") if soup.find("title") != None else ""
@@ -98,7 +101,7 @@ class DateTransferConsumer(ConsumerAction):
                 host = '{uri.netloc}'.format(uri=parsed_uri)
                 data = html.replace('\r', '').replace('\n', '').replace('\t', '')
                 insert_web_page_sql = """
-                    insert into qcy_hainiu_web_page (url,md5,create_time,create_day,create_hour,domain,param,update_time,host,
+                    insert into qcy_web_page (url,md5,create_time,create_day,create_hour,domain,param,update_time,host,
                     title,fail_ip,status) values (%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s,%s)
                     on DUPLICATE KEY UPDATE fail_times=fail_times+1,fail_ip=values(fail_ip);
                 """
@@ -123,15 +126,24 @@ class DateTransferConsumer(ConsumerAction):
             traceback.print_exc()
             redisConn.set("down:" + md5, url)
             result = False
+
         finally:
             pass
         return self.result(result, self.a_url)
+
+    def success_action(self, values):
+        pass
+
+    def fail_cation(self, values):
+        pass
 
 
 if __name__ == '__main__':
     sys.stdout = io.TextIOWrapper(sys.stdout.detach(), encoding='utf-8')
     sys.stderr = io.TextIOWrapper(sys.stderr.detach(), encoding='utf-8')
     q = queue.Queue()
-    pp = DateTransferProduce(20, 6)
-    p = Producer(q, pp, queue_name, 10, 2, 2, 3)
+    pp = DateTransferProduce(1, 1)
+    p = queue_producer.Producer(q, pp, configs._BASE_URL_PRODUCE_NAME, configs._BASE_URL_MAX_NUMBER,
+                                configs._BASE_URL_SLEEP_TIME, configs._BASE_URL_WORK_SLEEP_TIME,
+                                configs._BASE_URL_WORK_TRY_NUMBER)
     p.start_work()
